@@ -124,17 +124,13 @@ export default function Onboarding() {
 
         if (cvUploadError) throw cvUploadError;
 
-        const { data: cvUrlData } = supabase.storage
-          .from("employee-cvs")
-          .getPublicUrl(cvFileName);
-
-        cvUrl = cvUrlData.publicUrl;
+        cvUrl = cvFileName;
       }
 
       // Upload TIN document
       const tinFileName = `${user.id}/tin_${Date.now()}.pdf`;
       const { error: tinUploadError } = await supabase.storage
-        .from("employee-documents")
+        .from("identity-documents")
         .upload(tinFileName, tinFile);
 
       if (tinUploadError) throw tinUploadError;
@@ -142,19 +138,14 @@ export default function Onboarding() {
       // Upload NID document
       const nidFileName = `${user.id}/nid_${Date.now()}.pdf`;
       const { error: nidUploadError } = await supabase.storage
-        .from("employee-documents")
+        .from("identity-documents")
         .upload(nidFileName, nidFile);
 
       if (nidUploadError) throw nidUploadError;
 
-      // Get public URLs
-      const { data: tinUrlData } = supabase.storage
-        .from("employee-documents")
-        .getPublicUrl(tinFileName);
-
-      const { data: nidUrlData } = supabase.storage
-        .from("employee-documents")
-        .getPublicUrl(nidFileName);
+      // Get public URLs (identity-documents is not public, so store the file path)
+      const tinFilePath = tinFileName;
+      const nidFilePath = nidFileName;
 
       // Update employee record
       const { error: updateError } = await supabase
@@ -169,9 +160,9 @@ export default function Onboarding() {
           bank_name: bankName.trim(),
           bank_branch: bankBranch.trim(),
           tin_number: tinNumber.trim(),
-          tin_document_url: tinUrlData.publicUrl,
+          tin_document_url: tinFilePath,
           nid_number: nidNumber.trim(),
-          nid_document_url: nidUrlData.publicUrl,
+          nid_document_url: nidFilePath,
           cv_url: cvUrl,
           salary_accepted: true,
           onboarding_completed: true,

@@ -194,7 +194,18 @@ const Profile = () => {
 
       if (error) throw error;
 
-      toast.success("Update request submitted. A manager will review your changes.");
+      // Create task for manager
+      const { error: taskError } = await supabase.functions.invoke('create-bank-verification-task', {
+        body: { employeeId: employeeData.id, actionType: 'update_request' }
+      });
+
+      if (taskError) {
+        console.error('Failed to create task:', taskError);
+        toast.warning("Update request submitted, but task creation failed. Please notify your manager.");
+      } else {
+        toast.success("Update request submitted. A task has been created for your manager.");
+      }
+
       fetchEmployeeData();
     } catch (error: any) {
       toast.error("Failed to request update: " + error.message);
@@ -486,7 +497,18 @@ const Profile = () => {
 
       if (updateError) throw updateError;
 
-      toast.success("Bank statement uploaded successfully!");
+      // Create task for manager to verify
+      const { error: taskError } = await supabase.functions.invoke('create-bank-verification-task', {
+        body: { employeeId: employeeData.id, actionType: 'upload' }
+      });
+
+      if (taskError) {
+        console.error('Failed to create task:', taskError);
+        toast.warning("Bank statement uploaded, but task creation failed. Please notify your manager.");
+      } else {
+        toast.success("Bank statement uploaded! A verification task has been created for your manager.");
+      }
+
       setBankStatementFile(null);
       fetchEmployeeData();
     } catch (error: any) {

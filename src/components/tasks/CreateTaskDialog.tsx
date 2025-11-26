@@ -1,14 +1,38 @@
-import { useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+
+const taskFormSchema = z.object({
+  title: z.string().min(1, "Task title is required").max(200, "Title is too long"),
+  description: z.string().optional(),
+  priority: z.enum(["low", "medium", "high"]),
+  assignedTo: z.array(z.string()).min(1, "At least one assignee is required"),
+  dueDate: z.string().optional(),
+  isRecurring: z.boolean(),
+  recurrencePattern: z.string().optional(),
+  visibilityLevel: z.enum(["private", "team", "department", "public"]),
+}).refine((data) => {
+  if (data.isRecurring && !data.recurrencePattern) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Recurrence pattern is required for recurring tasks",
+  path: ["recurrencePattern"],
+});
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -23,32 +47,38 @@ export function CreateTaskDialog({
   employees,
   currentEmployeeId,
 }: CreateTaskDialogProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState("medium");
-  const [assignedTo, setAssignedTo] = useState<string[]>([]);
-  const [dueDate, setDueDate] = useState("");
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [recurrencePattern, setRecurrencePattern] = useState("");
-  const [visibilityLevel, setVisibilityLevel] = useState("private");
   const queryClient = useQueryClient();
+  
+  const form = useForm<z.infer<typeof taskFormSchema>>({
+    resolver: zodResolver(taskFormSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      priority: "medium",
+      assignedTo: [],
+      dueDate: "",
+      isRecurring: false,
+      recurrencePattern: "",
+      visibilityLevel: "private",
+    },
+  });
 
   const createMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (values: z.infer<typeof taskFormSchema>) => {
       // Insert the task
       const { data: taskData, error: taskError } = await supabase
         .from("tasks")
         .insert({
-          title,
-          description: description || null,
-          priority,
-          assigned_to: assignedTo.length === 1 ? assignedTo[0] : null,
+          title: values.title,
+          description: values.description || null,
+          priority: values.priority,
+          assigned_to: values.assignedTo.length === 1 ? values.assignedTo[0] : null,
           assigned_by: currentEmployeeId || null,
-          due_date: dueDate || null,
+          due_date: values.dueDate || null,
           status: "pending",
-          is_recurring: isRecurring,
-          recurrence_pattern: isRecurring ? recurrencePattern : null,
-          visibility_level: visibilityLevel,
+          is_recurring: values.isRecurring,
+          recurrence_pattern: values.isRecurring ? values.recurrencePattern : null,
+          visibility_level: values.visibilityLevel,
         })
         .select()
         .single();
@@ -56,8 +86,8 @@ export function CreateTaskDialog({
       if (taskError) throw taskError;
 
       // If multiple assignees, insert into task_assignments
-      if (assignedTo.length > 0 && taskData) {
-        const assignments = assignedTo.map((empId) => ({
+      if (values.assignedTo.length > 0 && taskData) {
+        const assignments = values.assignedTo.map((empId) => ({
           task_id: taskData.id,
           employee_id: empId,
         }));
@@ -72,7 +102,7 @@ export function CreateTaskDialog({
     onSuccess: () => {
       toast.success("Task created successfully!");
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      resetForm();
+      form.reset();
       onOpenChange(false);
     },
     onError: (error: any) => {
@@ -80,149 +110,263 @@ export function CreateTaskDialog({
     },
   });
 
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setPriority("medium");
-    setAssignedTo([]);
-    setDueDate("");
-    setIsRecurring(false);
-    setRecurrencePattern("");
-    setVisibilityLevel("private");
-  };
+  useEffect(() => {
+    if (!open) {
+      form.reset();
+    }
+  }, [open, form]);
 
-  const toggleAssignee = (employeeId: string) => {
-    setAssignedTo((prev) =>
-      prev.includes(employeeId)
-        ? prev.filter((id) => id !== employeeId)
-        : [...prev, employeeId]
-    );
+  const onSubmit = (values: z.infer<typeof taskFormSchema>) => {
+    createMutation.mutate(values);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Create New Task</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="task-title">Task Title *</Label>
-            <Input
-              id="task-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter task title"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="task-description">Description</Label>
-            <Textarea
-              id="task-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter task description"
-              rows={4}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="task-priority">Priority *</Label>
-              <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger id="task-priority">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-due-date">Due Date</Label>
-              <Input
-                id="task-due-date"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Assign To (Multiple)</Label>
-            <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
-              {employees.map((emp) => (
-                <div key={emp.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`emp-${emp.id}`}
-                    checked={assignedTo.includes(emp.id)}
-                    onCheckedChange={() => toggleAssignee(emp.id)}
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <ScrollArea className="h-[calc(90vh-200px)] pr-4">
+              <div className="space-y-6">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground">Basic Information</h3>
+                  
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Task Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter task title" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                  <Label
-                    htmlFor={`emp-${emp.id}`}
-                    className="text-sm font-normal cursor-pointer"
-                  >
-                    {emp.first_name} {emp.last_name} ({emp.employee_code})
-                  </Label>
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Enter task description" 
+                            rows={3}
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="visibility">Who Can View Task</Label>
-            <Select value={visibilityLevel} onValueChange={setVisibilityLevel}>
-              <SelectTrigger id="visibility">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="private">Private (Assignees Only)</SelectItem>
-                <SelectItem value="team">Team (Same Department)</SelectItem>
-                <SelectItem value="department">Department Wide</SelectItem>
-                <SelectItem value="public">Public (All Employees)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+                <Separator />
 
-          <div className="space-y-3 border-t pt-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="recurring"
-                checked={isRecurring}
-                onCheckedChange={(checked) => setIsRecurring(checked as boolean)}
-              />
-              <Label htmlFor="recurring" className="font-normal cursor-pointer">
-                Make this a recurring task
-              </Label>
-            </div>
+                {/* Priority & Due Date */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground">Priority & Timeline</h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="priority"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Priority</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="low">Low</SelectItem>
+                              <SelectItem value="medium">Medium</SelectItem>
+                              <SelectItem value="high">High</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-            {isRecurring && (
-              <div className="space-y-2 pl-6">
-                <Label htmlFor="recurrence">Recurrence Pattern</Label>
-                <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
-                  <SelectTrigger id="recurrence">
-                    <SelectValue placeholder="Select pattern" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="yearly">Yearly</SelectItem>
-                  </SelectContent>
-                </Select>
+                    <FormField
+                      control={form.control}
+                      name="dueDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Due Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Assignment */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground">Assignment</h3>
+                  
+                  <FormField
+                    control={form.control}
+                    name="assignedTo"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel>Assign To (Select Multiple)</FormLabel>
+                        <div className="border rounded-md bg-background">
+                          <ScrollArea className="h-48 p-4">
+                            <div className="space-y-3">
+                              {employees.map((emp) => (
+                                <FormField
+                                  key={emp.id}
+                                  control={form.control}
+                                  name="assignedTo"
+                                  render={({ field }) => (
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(emp.id)}
+                                          onCheckedChange={(checked) => {
+                                            return checked
+                                              ? field.onChange([...field.value, emp.id])
+                                              : field.onChange(
+                                                  field.value?.filter((value) => value !== emp.id)
+                                                );
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="font-normal cursor-pointer">
+                                        {emp.first_name} {emp.last_name} ({emp.employee_code})
+                                      </FormLabel>
+                                    </FormItem>
+                                  )}
+                                />
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Separator />
+
+                {/* Visibility */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground">Access Control</h3>
+                  
+                  <FormField
+                    control={form.control}
+                    name="visibilityLevel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Who Can View This Task</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="private">Private (Assignees Only)</SelectItem>
+                            <SelectItem value="team">Team (Same Department)</SelectItem>
+                            <SelectItem value="department">Department Wide</SelectItem>
+                            <SelectItem value="public">Public (All Employees)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Separator />
+
+                {/* Recurring */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground">Recurrence</h3>
+                  
+                  <FormField
+                    control={form.control}
+                    name="isRecurring"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer">
+                          Make this a recurring task
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch("isRecurring") && (
+                    <FormField
+                      control={form.control}
+                      name="recurrencePattern"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Recurrence Pattern</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select pattern" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="yearly">Yearly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-          <Button
-            onClick={() => createMutation.mutate()}
-            disabled={!title || (isRecurring && !recurrencePattern) || createMutation.isPending}
-            className="w-full"
-          >
-            {createMutation.isPending ? "Creating..." : "Create Task"}
-          </Button>
-        </div>
+            </ScrollArea>
+
+            <div className="flex gap-3 pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="flex-1"
+              >
+                {createMutation.isPending ? "Creating..." : "Create Task"}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

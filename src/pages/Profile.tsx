@@ -36,10 +36,14 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [uploadingCV, setUploadingCV] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingNID, setUploadingNID] = useState(false);
+  const [uploadingTIN, setUploadingTIN] = useState(false);
   const [employeeData, setEmployeeData] = useState<any>(null);
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [nidFile, setNidFile] = useState<File | null>(null);
+  const [tinFile, setTinFile] = useState<File | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -291,6 +295,134 @@ const Profile = () => {
       toast.error("Failed to upload profile picture: " + error.message);
     } finally {
       setUploadingAvatar(false);
+    }
+  };
+
+  const handleNIDUpload = async () => {
+    if (!nidFile) {
+      toast.error("Please select an NID document");
+      return;
+    }
+
+    setUploadingNID(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const fileExt = nidFile.name.split('.').pop();
+      const nidFileName = `${user.id}/nid_${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("identity-documents")
+        .upload(nidFileName, nidFile, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { error: updateError } = await supabase
+        .from("employees")
+        .update({ nid_document_url: nidFileName })
+        .eq("user_id", user.id);
+
+      if (updateError) throw updateError;
+
+      toast.success("NID document uploaded successfully!");
+      setNidFile(null);
+      fetchEmployeeData();
+    } catch (error: any) {
+      toast.error("Failed to upload NID: " + error.message);
+    } finally {
+      setUploadingNID(false);
+    }
+  };
+
+  const handleDownloadNID = async () => {
+    if (!employeeData?.nid_document_url) return;
+
+    try {
+      const { data, error } = await supabase.storage
+        .from("identity-documents")
+        .download(employeeData.nid_document_url);
+
+      if (error) throw error;
+
+      const fileName = employeeData.nid_document_url.split('/').pop() || 'nid.pdf';
+      const url = window.URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success("NID document downloaded successfully!");
+    } catch (error: any) {
+      toast.error("Failed to download NID: " + error.message);
+    }
+  };
+
+  const handleTINUpload = async () => {
+    if (!tinFile) {
+      toast.error("Please select a TIN document");
+      return;
+    }
+
+    setUploadingTIN(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const fileExt = tinFile.name.split('.').pop();
+      const tinFileName = `${user.id}/tin_${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("identity-documents")
+        .upload(tinFileName, tinFile, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { error: updateError } = await supabase
+        .from("employees")
+        .update({ tin_document_url: tinFileName })
+        .eq("user_id", user.id);
+
+      if (updateError) throw updateError;
+
+      toast.success("TIN document uploaded successfully!");
+      setTinFile(null);
+      fetchEmployeeData();
+    } catch (error: any) {
+      toast.error("Failed to upload TIN: " + error.message);
+    } finally {
+      setUploadingTIN(false);
+    }
+  };
+
+  const handleDownloadTIN = async () => {
+    if (!employeeData?.tin_document_url) return;
+
+    try {
+      const { data, error } = await supabase.storage
+        .from("identity-documents")
+        .download(employeeData.tin_document_url);
+
+      if (error) throw error;
+
+      const fileName = employeeData.tin_document_url.split('/').pop() || 'tin.pdf';
+      const url = window.URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success("TIN document downloaded successfully!");
+    } catch (error: any) {
+      toast.error("Failed to download TIN: " + error.message);
     }
   };
 
@@ -585,6 +717,108 @@ const Profile = () => {
               {uploadingCV && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Upload className="mr-2 h-4 w-4" />
               {employeeData?.cv_url ? "Update CV" : "Upload CV"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* NID Document Management */}
+        <Card>
+          <CardHeader>
+            <CardTitle>NID Certificate</CardTitle>
+            <CardDescription>Upload your National ID document</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {employeeData?.nid_document_url && (
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  <span className="text-sm font-medium">NID Document Uploaded</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadNID}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download
+                </Button>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="nidUpload">
+                {employeeData?.nid_document_url ? "Upload New NID Document" : "Upload NID Document"}
+              </Label>
+              <Input
+                id="nidUpload"
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => setNidFile(e.target.files?.[0] || null)}
+              />
+              <p className="text-xs text-muted-foreground">
+                PDF, JPG, or PNG format. Maximum file size: 10MB
+              </p>
+            </div>
+
+            <Button
+              onClick={handleNIDUpload}
+              disabled={!nidFile || uploadingNID}
+              variant="secondary"
+            >
+              {uploadingNID && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Upload className="mr-2 h-4 w-4" />
+              {employeeData?.nid_document_url ? "Update NID" : "Upload NID"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* TIN Document Management */}
+        <Card>
+          <CardHeader>
+            <CardTitle>TIN Certificate</CardTitle>
+            <CardDescription>Upload your Tax Identification Number certificate</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {employeeData?.tin_document_url && (
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  <span className="text-sm font-medium">TIN Document Uploaded</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadTIN}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download
+                </Button>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="tinUpload">
+                {employeeData?.tin_document_url ? "Upload New TIN Document" : "Upload TIN Document"}
+              </Label>
+              <Input
+                id="tinUpload"
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => setTinFile(e.target.files?.[0] || null)}
+              />
+              <p className="text-xs text-muted-foreground">
+                PDF, JPG, or PNG format. Maximum file size: 10MB
+              </p>
+            </div>
+
+            <Button
+              onClick={handleTINUpload}
+              disabled={!tinFile || uploadingTIN}
+              variant="secondary"
+            >
+              {uploadingTIN && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Upload className="mr-2 h-4 w-4" />
+              {employeeData?.tin_document_url ? "Update TIN" : "Upload TIN"}
             </Button>
           </CardContent>
         </Card>

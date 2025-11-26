@@ -69,6 +69,7 @@ const Auth = () => {
     });
 
     if (signUpError) {
+      console.error("Sign up error:", signUpError);
       if (signUpError.message.includes("already registered")) {
         toast.error("This email is already registered. Please sign in instead.");
       } else {
@@ -79,10 +80,13 @@ const Auth = () => {
     }
 
     if (!authData.user) {
+      console.error("No user data returned from sign up");
       toast.error("Failed to create user account");
       setLoading(false);
       return;
     }
+
+    console.log("User created successfully:", authData.user.id);
 
     // Send welcome email
     try {
@@ -102,41 +106,62 @@ const Auth = () => {
 
     // Upload CV if provided
     if (cvFile) {
-      const cvFileName = `${authData.user.id}/cv_${Date.now()}.pdf`;
-      const { error: cvUploadError } = await supabase.storage
-        .from("employee-cvs")
-        .upload(cvFileName, cvFile);
+      try {
+        const cvFileName = `${authData.user.id}/cv_${Date.now()}.pdf`;
+        const { error: cvUploadError } = await supabase.storage
+          .from("employee-cvs")
+          .upload(cvFileName, cvFile);
 
-      if (cvUploadError) {
-        toast.error("Failed to upload CV: " + cvUploadError.message);
+        if (cvUploadError) {
+          console.error("CV upload error:", cvUploadError);
+          toast.error("Failed to upload CV: " + cvUploadError.message);
+          setLoading(false);
+          return;
+        }
+
+        cvUrl = cvFileName;
+        console.log("CV uploaded successfully:", cvFileName);
+      } catch (error) {
+        console.error("CV upload exception:", error);
+        toast.error("An error occurred while uploading CV");
         setLoading(false);
         return;
       }
-
-      cvUrl = cvFileName;
     }
 
     // Generate employee code automatically
     const employeeCode = `EMP${Date.now().toString().slice(-6)}`;
     
     // Create employee record
-    const { error: employeeError } = await supabase
-      .from('employees')
-      .insert({
-        user_id: authData.user.id,
-        employee_code: employeeCode,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        cv_url: cvUrl,
-        hire_date: new Date().toISOString().split('T')[0],
-        status: 'active',
-        registration_status: 'pending',
-      });
+    try {
+      console.log("Creating employee record...", { user_id: authData.user.id, email: email.trim() });
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employees')
+        .insert({
+          user_id: authData.user.id,
+          employee_code: employeeCode,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          cv_url: cvUrl,
+          hire_date: new Date().toISOString().split('T')[0],
+          status: 'active',
+          registration_status: 'pending',
+        })
+        .select();
 
-    if (employeeError) {
-      toast.error("Failed to create employee record. Please contact admin.");
+      if (employeeError) {
+        console.error("Employee creation error:", employeeError);
+        toast.error("Failed to create employee record: " + employeeError.message);
+        setLoading(false);
+        return;
+      }
+
+      console.log("Employee record created successfully:", employeeData);
+    } catch (error) {
+      console.error("Employee creation exception:", error);
+      toast.error("An error occurred while creating your employee record");
       setLoading(false);
       return;
     }
@@ -163,6 +188,7 @@ const Auth = () => {
     });
 
     if (error) {
+      console.error("Sign in error:", error);
       if (error.message.includes("Invalid login credentials")) {
         toast.error("Invalid email or password. Please check your credentials.");
       } else {

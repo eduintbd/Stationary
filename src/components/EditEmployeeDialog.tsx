@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 interface EditEmployeeDialogProps {
@@ -34,12 +35,33 @@ export default function EditEmployeeDialog({
   const [employeeCode, setEmployeeCode] = useState(employee.employee_code);
   const [departmentId, setDepartmentId] = useState(employee.department_id || "");
   const [positionId, setPositionId] = useState(employee.position_id || "");
+  const [isManager, setIsManager] = useState(false);
+  const [isAccountant, setIsAccountant] = useState(false);
+
+  const { data: userRoles } = useQuery({
+    queryKey: ["user-roles", employee.user_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", employee.user_id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!employee.user_id,
+  });
 
   useEffect(() => {
     setEmployeeCode(employee.employee_code);
     setDepartmentId(employee.department_id || "");
     setPositionId(employee.position_id || "");
-  }, [employee]);
+    
+    if (userRoles) {
+      const roles = userRoles.map(r => r.role);
+      setIsManager(roles.includes("hr_manager"));
+      setIsAccountant(roles.includes("accountant"));
+    }
+  }, [employee, userRoles]);
 
   const { data: departments } = useQuery({
     queryKey: ["departments"],
@@ -69,7 +91,8 @@ export default function EditEmployeeDialog({
 
   const updateMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      // Update employee details
+      const { error: employeeError } = await supabase
         .from("employees")
         .update({
           employee_code: employeeCode,
@@ -78,7 +101,39 @@ export default function EditEmployeeDialog({
         })
         .eq("id", employee.id);
 
-      if (error) throw error;
+      if (employeeError) throw employeeError;
+
+      // Delete all existing roles for this user
+      const { error: deleteError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", employee.user_id);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new roles
+      const rolesToInsert = [];
+      
+      if (isManager) {
+        rolesToInsert.push({ user_id: employee.user_id, role: "hr_manager" });
+      }
+      
+      if (isAccountant) {
+        rolesToInsert.push({ user_id: employee.user_id, role: "accountant" });
+      }
+      
+      // Always ensure at least employee role exists
+      if (!isManager && !isAccountant) {
+        rolesToInsert.push({ user_id: employee.user_id, role: "employee" });
+      }
+
+      if (rolesToInsert.length > 0) {
+        const { error: insertError } = await supabase
+          .from("user_roles")
+          .insert(rolesToInsert);
+
+        if (insertError) throw insertError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employees"] });
@@ -136,6 +191,40 @@ export default function EditEmployeeDialog({
               </SelectContent>
             </Select>
           </div>
+          
+          <div className="space-y-3">
+            <Label>Access Roles</Label>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="manager"
+                checked={isManager}
+                onCheckedChange={(checked) => setIsManager(checked as boolean)}
+              />
+              <label
+                htmlFor="manager"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Manager Access
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="accountant"
+                checked={isAccountant}
+                onCheckedChange={(checked) => setIsAccountant(checked as boolean)}
+              />
+              <label
+                htmlFor="accountant"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Accountant/CFO Access
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              All employees have basic employee access by default
+            </p>
+          </div>
+          
           <Button
             onClick={() => updateMutation.mutate()}
             disabled={updateMutation.isPending}

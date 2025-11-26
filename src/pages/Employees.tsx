@@ -14,7 +14,7 @@ export default function Employees() {
   const { data: employees, isLoading } = useQuery({
     queryKey: ["employees"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: employeesData, error: employeesError } = await supabase
         .from("employees")
         .select(`
           *,
@@ -23,8 +23,22 @@ export default function Employees() {
         `)
         .order("employee_code");
       
-      if (error) throw error;
-      return data;
+      if (employeesError) throw employeesError;
+
+      // Fetch roles for all employees
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
+      
+      if (rolesError) throw rolesError;
+
+      // Map roles to employees
+      const employeesWithRoles = employeesData?.map(emp => ({
+        ...emp,
+        roles: rolesData?.filter(r => r.user_id === emp.user_id).map(r => r.role) || []
+      }));
+
+      return employeesWithRoles;
     },
   });
 
@@ -91,6 +105,7 @@ export default function Employees() {
                   <th className="text-left p-2">Email</th>
                   <th className="text-left p-2">Department</th>
                   <th className="text-left p-2">Position</th>
+                  <th className="text-left p-2">Access Roles</th>
                   <th className="text-left p-2">Status</th>
                   <th className="text-left p-2">Actions</th>
                 </tr>
@@ -103,6 +118,23 @@ export default function Employees() {
                     <td className="p-2">{employee.email}</td>
                     <td className="p-2">{employee.department?.department_name || '-'}</td>
                     <td className="p-2">{employee.position?.position_title || '-'}</td>
+                    <td className="p-2">
+                      <div className="flex gap-1 flex-wrap">
+                        {employee.roles?.includes('admin') && (
+                          <span className="px-2 py-1 rounded text-xs bg-purple-100 text-purple-800">Admin</span>
+                        )}
+                        {employee.roles?.includes('hr_manager') && (
+                          <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">Manager</span>
+                        )}
+                        {employee.roles?.includes('accountant') && (
+                          <span className="px-2 py-1 rounded text-xs bg-orange-100 text-orange-800">CFO</span>
+                        )}
+                        {(!employee.roles || employee.roles.length === 0 || 
+                          (employee.roles.length === 1 && employee.roles.includes('employee'))) && (
+                          <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">Employee</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="p-2">
                       <span className={`px-2 py-1 rounded text-xs ${
                         employee.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'

@@ -130,18 +130,26 @@ const FinancialStatements = () => {
   );
   const currentRetainedEarnings = retainedEarningsAccount ? Math.abs(retainedEarningsAccount.balance) : 0;
   
-  // Other equity accounts (excluding Retained Earnings)
-  const otherEquity = equity.filter((row) => 
+  // Separate owner capital accounts (sub-accounts) from parent equity accounts
+  const ownerCapitalAccounts = equity.filter((row) => 
+    row.account_name.toLowerCase().includes("capital") && 
     !row.account_name.toLowerCase().includes("retained earnings")
+  );
+  
+  // Other equity accounts (excluding Retained Earnings and individual capitals)
+  const otherEquity = equity.filter((row) => 
+    !row.account_name.toLowerCase().includes("retained earnings") &&
+    !row.account_name.toLowerCase().includes("capital")
   );
 
   const totalAssets = assets.reduce((sum, row) => sum + row.balance, 0);
   const totalLiabilities = liabilities.reduce((sum, row) => sum + Math.abs(row.balance), 0);
   const totalOtherEquity = otherEquity.reduce((sum, row) => sum + Math.abs(row.balance), 0);
+  const totalOwnerCapital = ownerCapitalAccounts.reduce((sum, row) => sum + Math.abs(row.balance), 0);
   
   // Calculate ending retained earnings: current + net income
   const endingRetainedEarnings = currentRetainedEarnings + netIncome;
-  const totalEquity = totalOtherEquity + endingRetainedEarnings;
+  const totalEquity = totalOtherEquity + totalOwnerCapital + endingRetainedEarnings;
 
   return (
     <div className="space-y-6">
@@ -249,6 +257,27 @@ const FinancialStatements = () => {
                         </TableCell>
                       </TableRow>
                     ))}
+                    
+                    {/* Owner's Capital with sub-accounts */}
+                    {ownerCapitalAccounts.length > 0 && (
+                      <>
+                        <TableRow className="font-semibold">
+                          <TableCell>Owner's Equity</TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {formatCurrency(totalOwnerCapital)}
+                          </TableCell>
+                        </TableRow>
+                        {ownerCapitalAccounts.map((row) => (
+                          <TableRow key={row.account_code} className="bg-muted/30">
+                            <TableCell className="pl-8">{row.account_name.replace("'s Capital", "'s Deposit")}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(row.balance)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </>
+                    )}
+                    
                     <TableRow>
                       <TableCell>Retained Earnings</TableCell>
                       <TableCell className={`text-right font-medium ${endingRetainedEarnings >= 0 ? "" : "text-destructive"}`}>
@@ -465,6 +494,26 @@ const FinancialStatements = () => {
                         <TableCell className="text-right">{formatCurrency(row.balance)}</TableCell>
                       </TableRow>
                     ))}
+                    
+                    {/* Owner's Capital with sub-accounts */}
+                    {ownerCapitalAccounts.length > 0 && (
+                      <>
+                        <TableRow className="border-t border-border">
+                          <TableCell className="font-semibold">Owner's Equity</TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {formatCurrency(totalOwnerCapital)}
+                          </TableCell>
+                        </TableRow>
+                        {ownerCapitalAccounts.map((row) => (
+                          <TableRow key={row.account_code} className="bg-muted/30">
+                            <TableCell className="pl-8">{row.account_name.replace("'s Capital", "'s Deposit")}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(row.balance)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </>
+                    )}
                     
                     <TableRow className="border-t border-border">
                       <TableCell className="font-semibold">Retained Earnings</TableCell>

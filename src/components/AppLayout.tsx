@@ -40,7 +40,7 @@ const AppLayout = () => {
   const location = useLocation();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -53,14 +53,13 @@ const AppLayout = () => {
         return;
       }
 
-      // Fetch user role
-      const { data: roleData } = await supabase
+      // Fetch all user roles
+      const { data: rolesData } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", session.user.id)
-        .single();
+        .eq("user_id", session.user.id);
 
-      setUserRole(roleData?.role || "employee");
+      setUserRoles(rolesData?.map(r => r.role) || ["employee"]);
       setLoading(false);
     };
 
@@ -108,7 +107,7 @@ const AppLayout = () => {
 
   const filteredMenuItems = menuItems.filter(item => {
     if (!item.roles) return true; // No role restriction
-    return item.roles.includes(userRole || "");
+    return item.roles.some(role => userRoles.includes(role));
   });
 
   if (loading) {

@@ -7,7 +7,6 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
-import PendingRegistrations from "./pages/PendingRegistrations";
 import AppLayout from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import ChartOfAccounts from "./pages/ChartOfAccounts";
@@ -53,7 +52,6 @@ const App = () => (
             <Route path="/leave" element={<Leave />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/departments" element={<Departments />} />
-            <Route path="/pending-registrations" element={<PendingRegistrations />} />
             <Route path="/role-requests" element={<RoleRequests />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/profile" element={<Profile />} />

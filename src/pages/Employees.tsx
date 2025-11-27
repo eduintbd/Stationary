@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Users, Pencil, UserPlus, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Users, Pencil, UserPlus, Search, XCircle, Clock, ShieldCheck, Settings, CheckCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,10 @@ export default function Employees() {
     phone: "",
     employee_code: "",
   });
+  const [roleRejectionReason, setRoleRejectionReason] = useState<{ [key: string]: string }>({});
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
   const queryClient = useQueryClient();
 
   // Get current user role
@@ -124,6 +129,28 @@ export default function Employees() {
         .from("departments")
         .select("*")
         .eq("is_active", true);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: roleRequests } = useQuery({
+    queryKey: ["role-requests"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("role_upgrade_requests")
+        .select(`
+          *,
+          employee:employees(
+            first_name,
+            last_name,
+            email,
+            employee_code,
+            user_id
+          )
+        `)
+        .order("requested_at", { ascending: false });
+
       if (error) throw error;
       return data;
     },
@@ -246,6 +273,110 @@ export default function Employees() {
     },
   });
 
+  const approveRoleMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      const request = roleRequests?.find(r => r.id === requestId);
+      if (!request) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: reviewer } = await supabase
+        .from("employees")
+        .select("id")
+        .eq("user_id", user?.id)
+        .single();
+
+      const { error: updateError } = await supabase
+        .from("role_upgrade_requests")
+        .update({
+          status: "approved",
+          reviewed_by: reviewer?.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", requestId);
+
+      if (updateError) throw updateError;
+
+      const { error: deleteError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", (request.employee as any).user_id);
+
+      if (deleteError) throw deleteError;
+
+      const { error: insertError } = await supabase
+        .from("user_roles")
+        .insert({
+          user_id: (request.employee as any).user_id,
+          role: request.requested_role,
+        });
+
+      if (insertError) throw insertError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["role-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      toast.success("Role request approved");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to approve request");
+    },
+  });
+
+  const rejectRoleMutation = useMutation({
+    mutationFn: async ({ requestId, reason }: { requestId: string; reason: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: reviewer } = await supabase
+        .from("employees")
+        .select("id")
+        .eq("user_id", user?.id)
+        .single();
+
+      const { error } = await supabase
+        .from("role_upgrade_requests")
+        .update({
+          status: "rejected",
+          reviewed_by: reviewer?.id,
+          reviewed_at: new Date().toISOString(),
+          rejection_reason: reason,
+        })
+        .eq("id", requestId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["role-requests"] });
+      toast.success("Role request rejected");
+      setRoleRejectionReason({});
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to reject request");
+    },
+  });
+
+  const handleResetPassword = async () => {
+    if (!resetEmail || !resetPassword) {
+      toast.error("Please enter both email and new password");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke("admin-reset-password", {
+        body: { email: resetEmail, newPassword: resetPassword },
+      });
+
+      if (error) throw error;
+
+      toast.success("Password reset successfully");
+      setResetEmail("");
+      setResetPassword("");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to reset password");
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   const resetApprovalForm = () => {
     setCompanyEmail("");
     setSalary("");
@@ -292,6 +423,18 @@ export default function Employees() {
             <TabsTrigger value="pending">
               Pending Approvals {pendingEmployees && pendingEmployees.length > 0 && `(${pendingEmployees.length})`}
             </TabsTrigger>
+          )}
+          {currentUserRole === 'admin' && (
+            <>
+              <TabsTrigger value="role-requests">
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                Role Requests
+              </TabsTrigger>
+              <TabsTrigger value="admin-tools">
+                <Settings className="h-4 w-4 mr-2" />
+                Admin Tools
+              </TabsTrigger>
+            </>
           )}
         </TabsList>
 
@@ -466,6 +609,164 @@ export default function Employees() {
                 </table>
               </div>
             </div>
+          </TabsContent>
+        )}
+
+        {currentUserRole === 'admin' && (
+          <TabsContent value="role-requests" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Pending Role Requests ({roleRequests?.filter(r => r.status === "pending").length || 0})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {roleRequests?.filter(r => r.status === "pending").length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No pending role requests</p>
+                ) : (
+                  <div className="space-y-4">
+                    {roleRequests?.filter(r => r.status === "pending").map((request) => (
+                      <Card key={request.id} className="border border-gray-200">
+                        <CardContent className="pt-6">
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-semibold text-gray-900">
+                                  {(request.employee as any)?.first_name} {(request.employee as any)?.last_name}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {(request.employee as any)?.email} • ID: {(request.employee as any)?.employee_code}
+                                </p>
+                              </div>
+                              <Badge className="bg-blue-100 text-blue-800 font-semibold">
+                                {request.requested_role === "hr_manager" ? "Manager" : "Accountant/CFO"}
+                              </Badge>
+                            </div>
+
+                            <div>
+                              <Label className="text-sm font-semibold">Reason:</Label>
+                              <p className="text-sm mt-1 text-gray-700">{request.reason}</p>
+                            </div>
+
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => approveRoleMutation.mutate(request.id)}
+                                disabled={approveRoleMutation.isPending}
+                                className="bg-teal-600 hover:bg-teal-700"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Approve
+                              </Button>
+                              <div className="flex-1 flex gap-2">
+                                <Textarea
+                                  placeholder="Rejection reason..."
+                                  value={roleRejectionReason[request.id] || ""}
+                                  onChange={(e) =>
+                                    setRoleRejectionReason({ ...roleRejectionReason, [request.id]: e.target.value })
+                                  }
+                                  rows={1}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() =>
+                                    rejectRoleMutation.mutate({
+                                      requestId: request.id,
+                                      reason: roleRejectionReason[request.id] || "No reason provided",
+                                    })
+                                  }
+                                  disabled={rejectRoleMutation.isPending}
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Reviewed Requests</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {roleRequests?.filter(r => r.status !== "pending").length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">No reviewed requests</p>
+                ) : (
+                  <div className="space-y-2">
+                    {roleRequests?.filter(r => r.status !== "pending").map((request) => (
+                      <div
+                        key={request.id}
+                        className="flex justify-between items-center p-3 rounded-lg border border-gray-200"
+                      >
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {(request.employee as any)?.first_name} {(request.employee as any)?.last_name}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {request.requested_role === "hr_manager" ? "Manager" : "Accountant/CFO"} Access
+                          </p>
+                        </div>
+                        <Badge className={request.status === "approved" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                          {request.status === "approved" ? "Approved" : "Rejected"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {currentUserRole === 'admin' && (
+          <TabsContent value="admin-tools" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Reset User Password</CardTitle>
+                <p className="text-sm text-gray-600">Update the password for any user account</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="resetEmail">User Email</Label>
+                  <Input
+                    id="resetEmail"
+                    type="email"
+                    placeholder="user@example.com"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="resetPassword">New Password</Label>
+                  <Input
+                    id="resetPassword"
+                    type="text"
+                    placeholder="Enter new password"
+                    value={resetPassword}
+                    onChange={(e) => setResetPassword(e.target.value)}
+                  />
+                </div>
+                
+                <Button 
+                  onClick={handleResetPassword} 
+                  disabled={resetLoading}
+                  className="w-full bg-teal-600 hover:bg-teal-700"
+                >
+                  {resetLoading ? "Resetting..." : "Reset Password"}
+                </Button>
+              </CardContent>
+            </Card>
           </TabsContent>
         )}
       </Tabs>

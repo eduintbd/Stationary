@@ -26,16 +26,15 @@ export default function Tasks() {
     },
   });
 
-  const { data: userRole } = useQuery({
-    queryKey: ["user-role", session?.user?.id],
+  const { data: userRoles } = useQuery({
+    queryKey: ["user-roles", session?.user?.id],
     queryFn: async () => {
-      if (!session?.user?.id) return null;
+      if (!session?.user?.id) return [];
       const { data } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", session.user.id)
-        .single();
-      return data?.role;
+        .eq("user_id", session.user.id);
+      return data?.map(r => r.role) || [];
     },
     enabled: !!session?.user?.id,
   });
@@ -142,7 +141,9 @@ export default function Tasks() {
     },
   });
 
-  const isAdmin = userRole === "admin" || userRole === "hr_manager";
+  const isAdmin = userRoles?.some(role => 
+    role === "admin" || role === "hr_manager"
+  ) || false;
 
   const taskStats = {
     total: tasks?.length || 0,

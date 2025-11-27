@@ -1047,6 +1047,90 @@ export type Database = {
           },
         ]
       }
+      task_attachments: {
+        Row: {
+          created_at: string
+          employee_id: string
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          file_name: string
+          file_path: string
+          file_size: number
+          id?: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_attachments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_attachments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_comments: {
+        Row: {
+          comment: string
+          created_at: string
+          employee_id: string
+          id: string
+          task_id: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          task_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assigned_by: string | null

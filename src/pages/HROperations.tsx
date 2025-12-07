@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Calendar, Clock, CheckCircle, XCircle, DollarSign, TrendingUp } from "lucide-react";
+import { RequestLeaveDialog } from "@/components/RequestLeaveDialog";
 
 export default function HROperations() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
   // Leave queries
   const { data: leaveRequests, isLoading: leaveLoading } = useQuery({
@@ -93,11 +95,13 @@ export default function HROperations() {
           <TabsContent value="leave" className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
               <h2 className="text-lg md:text-xl font-semibold text-foreground">Leave Management</h2>
-              <Button className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto" onClick={() => setLeaveDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Request Leave
               </Button>
             </div>
+            
+            <RequestLeaveDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen} />
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
               <Card className="border-l-4 border-l-warning">

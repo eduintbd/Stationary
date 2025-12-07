@@ -163,12 +163,10 @@ export default function Tasks() {
           <h1 className="text-2xl md:text-3xl font-bold">Task Management</h1>
           <p className="text-sm md:text-base text-muted-foreground">Manage and track all tasks</p>
         </div>
-        {isAdmin && (
-          <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Task
-          </Button>
-        )}
+        <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-2" />
+          Create Task
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">

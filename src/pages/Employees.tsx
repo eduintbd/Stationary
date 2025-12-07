@@ -45,24 +45,23 @@ export default function Employees() {
   const [resetLoading, setResetLoading] = useState(false);
   const queryClient = useQueryClient();
 
-  // Get current user role
-  const { data: currentUserRole } = useQuery({
-    queryKey: ["current-user-role"],
+  // Get current user roles (fetch all roles, not just one)
+  const { data: currentUserRoles } = useQuery({
+    queryKey: ["current-user-roles"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      if (!user) return [];
       
       const { data } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id)
-        .single();
+        .eq("user_id", user.id);
       
-      return data?.role;
+      return data?.map(r => r.role) || [];
     },
   });
 
-  const isManagerOrAbove = currentUserRole && ['admin', 'manager'].includes(currentUserRole);
+  const isManagerOrAbove = currentUserRoles && currentUserRoles.some(role => ['admin', 'manager'].includes(role));
 
   const { data: employees, isLoading } = useQuery({
     queryKey: ["employees"],
@@ -430,7 +429,7 @@ export default function Employees() {
               <span className="sm:hidden">Roles</span>
             </TabsTrigger>
           )}
-          {currentUserRole === 'admin' && (
+          {currentUserRoles?.includes('admin') && (
             <TabsTrigger value="admin-tools" className="flex-1 sm:flex-none text-xs sm:text-sm">
               <Settings className="h-4 w-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Admin Tools</span>
@@ -774,7 +773,7 @@ export default function Employees() {
           </TabsContent>
         )}
 
-        {currentUserRole === 'admin' && (
+        {currentUserRoles?.includes('admin') && (
           <TabsContent value="admin-tools" className="space-y-4">
             <Card>
               <CardHeader>

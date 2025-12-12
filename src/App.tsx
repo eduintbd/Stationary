@@ -22,6 +22,7 @@ import Departments from "./pages/Departments";
 import Tasks from "./pages/Tasks";
 import Profile from "./pages/Profile";
 import Messages from "./pages/Messages";
+import Careers from "./pages/Careers";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/careers" element={<Careers />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route element={<AppLayout />}>

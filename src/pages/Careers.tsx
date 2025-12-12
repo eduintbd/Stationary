@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import eduintLogo from "@/assets/eduintbd-logo.jpg";
 import {
   GraduationCap,
   Globe,
@@ -40,7 +41,7 @@ import {
   Shield,
 } from "lucide-react";
 
-const COMPANY_NAME = "EDUINT Education Consultancy";
+const COMPANY_NAME = "EDUINTBD";
 
 const openPositions = [
   {
@@ -246,7 +247,7 @@ export default function Careers() {
         <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
           <div className="container mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <GraduationCap className="h-8 w-8 text-primary" />
+              <img src={eduintLogo} alt="EDUINTBD Logo" className="h-10 w-auto" />
               <span className="font-bold text-xl">{COMPANY_NAME}</span>
             </div>
             <div className="hidden md:flex items-center gap-6">

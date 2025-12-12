@@ -746,7 +746,7 @@ export default function Careers() {
         </section>
 
         {/* Footer */}
-        <footer className="bg-navy-900 text-white py-16">
+        <footer className="bg-navy text-white py-16">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
               {/* Brand Column */}
@@ -758,7 +758,7 @@ export default function Careers() {
                 <p className="text-white/70 mb-6 text-sm leading-relaxed">
                   Your trusted partner for international education. We're here to support you on your study abroad journey.
                 </p>
-                <p className="text-gold-400 font-medium mb-3">Let's get social</p>
+                <p className="text-gold font-medium mb-3">Let's get social</p>
                 <div className="flex gap-3">
                   <a href="https://facebook.com/eduintbd" target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
                     <Facebook className="h-4 w-4" />

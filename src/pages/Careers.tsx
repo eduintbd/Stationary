@@ -13,32 +13,41 @@ import eduintLogo from "@/assets/eduintbd-logo.jpg";
 import {
   GraduationCap,
   Globe,
-  TrendingUp,
-  Lightbulb,
   Users,
-  Heart,
+  Building2,
   Target,
-  BookOpen,
-  Briefcase,
+  Sparkles,
+  CheckCircle2,
+  ArrowRight,
   MapPin,
   Clock,
+  Briefcase,
+  Heart,
+  Award,
+  TrendingUp,
+  Coffee,
+  Laptop,
+  Gift,
+  ChevronDown,
   ChevronRight,
-  Upload,
-  CheckCircle2,
+  Search,
+  Filter,
+  Quote,
   Send,
-  Linkedin,
-  Facebook,
-  Youtube,
   Mail,
   Phone,
-  Building2,
-  Sparkles,
-  Award,
-  MessageSquare,
-  FileText,
-  UserCheck,
-  Rocket,
+  Facebook,
+  Linkedin,
+  Youtube,
+  Instagram,
+  MessageCircle,
   Shield,
+  Rocket,
+  BookOpen,
+  Lightbulb,
+  FileText,
+  MessageSquare,
+  Upload,
 } from "lucide-react";
 
 const COMPANY_NAME = "EDUINTBD";
@@ -737,67 +746,129 @@ export default function Careers() {
         </section>
 
         {/* Footer */}
-        <footer className="bg-foreground text-background py-16">
+        <footer className="bg-navy-900 text-white py-16">
           <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-              <div className="md:col-span-2">
-                <div className="flex items-center gap-2 mb-4">
-                  <GraduationCap className="h-8 w-8" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+              {/* Brand Column */}
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <img src={eduintLogo} alt="EDUINTBD Logo" className="h-12 w-auto rounded" />
                   <span className="font-bold text-xl">{COMPANY_NAME}</span>
                 </div>
-                <p className="text-background/70 mb-6 max-w-md">
-                  Empowering students to achieve their global education dreams through ethical counselling and comprehensive support. Join us in making a difference.
+                <p className="text-white/70 mb-6 text-sm leading-relaxed">
+                  Your trusted partner for international education. We're here to support you on your study abroad journey.
                 </p>
-                <div className="flex gap-4">
-                  <a href="#" className="h-10 w-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-background/20 transition-colors">
-                    <Facebook className="h-5 w-5" />
+                <p className="text-gold-400 font-medium mb-3">Let's get social</p>
+                <div className="flex gap-3">
+                  <a href="https://facebook.com/eduintbd" target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+                    <Facebook className="h-4 w-4" />
                   </a>
-                  <a href="#" className="h-10 w-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-background/20 transition-colors">
-                    <Linkedin className="h-5 w-5" />
+                  <a href="https://linkedin.com/company/eduintbd" target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+                    <Linkedin className="h-4 w-4" />
                   </a>
-                  <a href="#" className="h-10 w-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-background/20 transition-colors">
-                    <Youtube className="h-5 w-5" />
+                  <a href="https://instagram.com/eduintbd" target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+                    <Instagram className="h-4 w-4" />
+                  </a>
+                  <a href="https://youtube.com/@eduintbd" target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+                    <Youtube className="h-4 w-4" />
+                  </a>
+                  <a href="https://wa.me/8801898934855" target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+                    <MessageCircle className="h-4 w-4" />
                   </a>
                 </div>
               </div>
 
+              {/* Our Services Column */}
               <div>
-                <h4 className="font-semibold mb-4">Quick Links</h4>
-                <ul className="space-y-2">
-                  <li><a href="#" className="text-background/70 hover:text-background transition-colors">About Us</a></li>
-                  <li><a href="#" className="text-background/70 hover:text-background transition-colors">Services</a></li>
-                  <li><a href="#" className="text-background/70 hover:text-background transition-colors">Careers</a></li>
-                  <li><a href="#" className="text-background/70 hover:text-background transition-colors">Contact</a></li>
-                  <li><a href="#" className="text-background/70 hover:text-background transition-colors">Privacy Policy</a></li>
+                <h4 className="font-semibold mb-4 text-lg">Our Services</h4>
+                <ul className="space-y-3">
+                  <li>
+                    <a href="https://eduintbd.ai/admission" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white transition-colors text-sm">
+                      Education Counselling
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://eduintbd.ai/admission" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white transition-colors text-sm">
+                      Application Process
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://eduintbd.ai/visa" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white transition-colors text-sm">
+                      Visa Documentation
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://eduintbd.ai/scholarship" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white transition-colors text-sm">
+                      Scholarship Guidance
+                    </a>
+                  </li>
                 </ul>
               </div>
 
+              {/* Study Destinations Column */}
               <div>
-                <h4 className="font-semibold mb-4">Contact</h4>
+                <h4 className="font-semibold mb-4 text-lg">Study Destinations</h4>
                 <ul className="space-y-3">
-                  <li className="flex items-center gap-2 text-background/70">
-                    <Mail className="h-4 w-4" />
-                    careers@eduint.com
+                  <li>
+                    <a href="https://eduintbd.ai" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white transition-colors text-sm">
+                      Study In Australia
+                    </a>
                   </li>
-                  <li className="flex items-center gap-2 text-background/70">
-                    <Phone className="h-4 w-4" />
-                    +880 1XXX-XXXXXX
+                  <li>
+                    <a href="https://eduintbd.ai" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white transition-colors text-sm">
+                      Study In Canada
+                    </a>
                   </li>
-                  <li className="flex items-center gap-2 text-background/70">
-                    <MapPin className="h-4 w-4" />
-                    Dhaka, Bangladesh
+                  <li>
+                    <a href="https://eduintbd.ai" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white transition-colors text-sm">
+                      Study In UK
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://eduintbd.ai" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white transition-colors text-sm">
+                      Study In USA
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Contact Us Column */}
+              <div>
+                <h4 className="font-semibold mb-4 text-lg">Contact Us</h4>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-3 text-white/70 text-sm">
+                    <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>Dhaka, Bangladesh</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-white/70 text-sm">
+                    <Phone className="h-4 w-4 flex-shrink-0" />
+                    <a href="tel:+8801898934855" className="hover:text-white transition-colors">
+                      +880 1898934855
+                    </a>
+                  </li>
+                  <li className="flex items-center gap-3 text-white/70 text-sm">
+                    <Mail className="h-4 w-4 flex-shrink-0" />
+                    <a href="mailto:info@eduintbd.com" className="hover:text-white transition-colors">
+                      info@eduintbd.com
+                    </a>
                   </li>
                 </ul>
               </div>
             </div>
 
-            <div className="border-t border-background/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-              <p className="text-background/50 text-sm">
-                © {new Date().getFullYear()} {COMPANY_NAME}. All rights reserved.
+            {/* Footer Bottom */}
+            <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+              <p className="text-white/50 text-sm">
+                © 2025 Education International. All rights reserved.
               </p>
-              <p className="text-background/50 text-sm text-center">
-                We welcome applications from diverse backgrounds and are committed to equal opportunity hiring.
-              </p>
+              <div className="flex gap-6">
+                <a href="https://eduintbd.ai" target="_blank" rel="noopener noreferrer" className="text-white/50 hover:text-white text-sm transition-colors">
+                  Privacy Policy
+                </a>
+                <a href="https://eduintbd.ai" target="_blank" rel="noopener noreferrer" className="text-white/50 hover:text-white text-sm transition-colors">
+                  Terms & Conditions
+                </a>
+              </div>
             </div>
           </div>
         </footer>

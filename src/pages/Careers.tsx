@@ -239,7 +239,7 @@ const whyJoinUs = [
   {
     icon: Globe,
     title: "Global Exposure",
-    description: "Work with universities across Korea, Japan, Australia, and New Zealand.",
+    description: "Work with universities across Australia, Canada, New Zealand, South Korea, UK, USA & Europe.",
   },
   {
     icon: TrendingUp,

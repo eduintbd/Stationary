@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import eduintLogo from "@/assets/eduintbd-logo.jpg";
 import {
   GraduationCap,
@@ -209,6 +210,8 @@ export default function Careers() {
   const [experienceFilter, setExperienceFilter] = useState<string>("all");
   const [joinTalentPool, setJoinTalentPool] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredPositions = openPositions.filter((position) => {
     if (departmentFilter !== "all" && position.department !== departmentFilter) return false;
@@ -217,22 +220,62 @@ export default function Careers() {
     return true;
   });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File too large", { description: "CV must be less than 5MB" });
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast.success("Application submitted successfully!", {
-      description: joinTalentPool 
-        ? "You've also been added to our talent pool for future opportunities."
-        : "We'll review your application and get back to you soon.",
-    });
-    
-    setIsSubmitting(false);
-    (e.target as HTMLFormElement).reset();
-    setJoinTalentPool(false);
+    try {
+      const formEl = e.target as HTMLFormElement;
+      const formData = new FormData();
+      
+      formData.append("fullName", (formEl.elements.namedItem("fullName") as HTMLInputElement).value);
+      formData.append("email", (formEl.elements.namedItem("email") as HTMLInputElement).value);
+      formData.append("phone", (formEl.elements.namedItem("phone") as HTMLInputElement).value);
+      formData.append("location", (formEl.elements.namedItem("location") as HTMLInputElement).value);
+      formData.append("role", (formEl.elements.namedItem("role") as HTMLSelectElement)?.value || "");
+      formData.append("dob", (formEl.elements.namedItem("dob") as HTMLInputElement).value);
+      formData.append("linkedin", (formEl.elements.namedItem("linkedin") as HTMLInputElement).value || "");
+      formData.append("whyUs", (formEl.elements.namedItem("whyUs") as HTMLTextAreaElement).value);
+      formData.append("joinTalentPool", joinTalentPool.toString());
+      
+      if (selectedFile) {
+        formData.append("cv", selectedFile);
+      }
+
+      const { data, error } = await supabase.functions.invoke("submit-application", {
+        body: formData,
+      });
+
+      if (error) throw error;
+
+      toast.success("Application submitted successfully!", {
+        description: joinTalentPool 
+          ? "You've also been added to our talent pool for future opportunities."
+          : "We'll review your application and get back to you soon.",
+      });
+      
+      formEl.reset();
+      setJoinTalentPool(false);
+      setSelectedFile(null);
+    } catch (error) {
+      console.error("Submission error:", error);
+      toast.error("Failed to submit application", {
+        description: error instanceof Error ? error.message : "Please try again later.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const scrollToSection = (id: string) => {
@@ -671,17 +714,33 @@ export default function Careers() {
 
                     <div className="space-y-2">
                       <Label htmlFor="cv">Upload CV/Resume *</Label>
-                      <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                        <Input id="cv" name="cv" type="file" accept=".pdf,.doc,.docx" required className="hidden" />
-                        <label htmlFor="cv" className="cursor-pointer">
-                          <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                      <div 
+                        className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Input 
+                          ref={fileInputRef}
+                          id="cv" 
+                          name="cv" 
+                          type="file" 
+                          accept=".pdf,.doc,.docx" 
+                          required={!selectedFile}
+                          className="hidden" 
+                          onChange={handleFileChange}
+                        />
+                        <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                        {selectedFile ? (
+                          <p className="text-sm text-primary font-medium">
+                            {selectedFile.name}
+                          </p>
+                        ) : (
                           <p className="text-sm text-muted-foreground">
                             Click to upload or drag and drop
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            PDF, DOC, DOCX (max 5MB)
-                          </p>
-                        </label>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          PDF, DOC, DOCX (max 5MB)
+                        </p>
                       </div>
                     </div>
 

@@ -96,6 +96,34 @@ serve(async (req) => {
 
     console.log("Application saved successfully:", applicationData.id);
 
+    // Send confirmation email to applicant
+    try {
+      const emailResponse = await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-application-confirmation`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+          },
+          body: JSON.stringify({
+            email: email,
+            fullName: fullName,
+            roleApplied: role,
+          }),
+        }
+      );
+      
+      if (emailResponse.ok) {
+        console.log("Confirmation email sent successfully");
+      } else {
+        console.error("Failed to send confirmation email:", await emailResponse.text());
+      }
+    } catch (emailError) {
+      console.error("Error sending confirmation email:", emailError);
+      // Don't fail the application submission if email fails
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 

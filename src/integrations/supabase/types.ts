@@ -667,6 +667,74 @@ export type Database = {
           },
         ]
       }
+      job_applications: {
+        Row: {
+          created_at: string | null
+          cv_url: string | null
+          date_of_birth: string | null
+          email: string
+          full_name: string
+          id: string
+          join_talent_pool: boolean | null
+          linkedin: string | null
+          location: string | null
+          notes: string | null
+          phone: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          role_applied: string
+          status: string | null
+          updated_at: string | null
+          why_us: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          cv_url?: string | null
+          date_of_birth?: string | null
+          email: string
+          full_name: string
+          id?: string
+          join_talent_pool?: boolean | null
+          linkedin?: string | null
+          location?: string | null
+          notes?: string | null
+          phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role_applied: string
+          status?: string | null
+          updated_at?: string | null
+          why_us?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          cv_url?: string | null
+          date_of_birth?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          join_talent_pool?: boolean | null
+          linkedin?: string | null
+          location?: string | null
+          notes?: string | null
+          phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role_applied?: string
+          status?: string | null
+          updated_at?: string | null
+          why_us?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_applications_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       journal_entries: {
         Row: {
           created_at: string | null

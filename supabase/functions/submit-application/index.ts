@@ -70,22 +70,31 @@ serve(async (req) => {
       console.log("CV uploaded successfully:", cvUrl);
     }
 
-    // For now, we'll log the application. In a full implementation,
-    // you might want to store this in a separate applications table
-    // or send it via email notification
-    console.log("Application submitted:", {
-      fullName,
-      email,
-      phone,
-      location,
-      role,
-      dob,
-      linkedin,
-      whyUs,
-      joinTalentPool,
-      cvUrl,
-      submittedAt: new Date().toISOString(),
-    });
+    // Insert application into job_applications table
+    const { data: applicationData, error: insertError } = await supabaseClient
+      .from("job_applications")
+      .insert({
+        full_name: fullName,
+        email: email,
+        phone: phone,
+        location: location,
+        role_applied: role,
+        date_of_birth: dob || null,
+        linkedin: linkedin || null,
+        why_us: whyUs,
+        join_talent_pool: joinTalentPool,
+        cv_url: cvUrl,
+        status: "pending",
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Failed to save application:", insertError);
+      throw new Error(`Failed to save application: ${insertError.message}`);
+    }
+
+    console.log("Application saved successfully:", applicationData.id);
 
     return new Response(
       JSON.stringify({ 

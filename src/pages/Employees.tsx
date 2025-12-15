@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users, Pencil, UserPlus, Search, XCircle, Clock, ShieldCheck, Settings, CheckCircle } from "lucide-react";
+import { Plus, Users, Pencil, UserPlus, Search, XCircle, Clock, ShieldCheck, Settings, CheckCircle, FileText, ExternalLink } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -153,6 +153,20 @@ export default function Employees() {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: jobApplications } = useQuery({
+    queryKey: ["job-applications"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("job_applications")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: isManagerOrAbove,
   });
 
   const addEmployeeMutation = useMutation({
@@ -467,6 +481,15 @@ export default function Employees() {
         <TabsList className="w-full overflow-x-auto flex sm:inline-flex">
           <TabsTrigger value="all" className="flex-1 sm:flex-none text-xs sm:text-sm">Employees</TabsTrigger>
           {isManagerOrAbove && (
+            <TabsTrigger value="applications" className="flex-1 sm:flex-none text-xs sm:text-sm">
+              <FileText className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Applications</span>
+              <span className="sm:hidden">Apps</span>
+              {jobApplications?.filter(a => a.status === 'pending').length > 0 && 
+                ` (${jobApplications.filter(a => a.status === 'pending').length})`}
+            </TabsTrigger>
+          )}
+          {isManagerOrAbove && (
             <TabsTrigger value="pending" className="flex-1 sm:flex-none text-xs sm:text-sm">
               Pending {pendingEmployees && pendingEmployees.length > 0 && `(${pendingEmployees.length})`}
             </TabsTrigger>
@@ -637,6 +660,114 @@ export default function Employees() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isManagerOrAbove && (
+          <TabsContent value="applications" className="space-y-4">
+            <div className="bg-primary/10 border border-primary/20 p-6 rounded-lg shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-2">Pending Applications</div>
+                  <div className="text-3xl font-bold text-primary">{jobApplications?.filter(a => a.status === 'pending').length || 0}</div>
+                </div>
+                <FileText className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Job Applications</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!jobApplications || jobApplications.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No job applications yet</p>
+                ) : (
+                  <div className="space-y-4">
+                    {jobApplications.map((app) => (
+                      <Card key={app.id} className={`border ${app.status === 'pending' ? 'border-warning' : app.status === 'approved' ? 'border-success' : 'border-destructive'}`}>
+                        <CardContent className="pt-6">
+                          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-lg">{app.full_name}</p>
+                                <Badge variant={app.status === 'pending' ? 'outline' : app.status === 'approved' ? 'default' : 'destructive'}>
+                                  {app.status}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">{app.email} • {app.phone}</p>
+                              <p className="text-sm"><span className="font-medium">Role:</span> {app.role_applied}</p>
+                              <p className="text-sm"><span className="font-medium">Location:</span> {app.location}</p>
+                              {app.date_of_birth && (
+                                <p className="text-sm"><span className="font-medium">DOB:</span> {app.date_of_birth}</p>
+                              )}
+                              {app.linkedin && (
+                                <p className="text-sm"><span className="font-medium">LinkedIn:</span> {app.linkedin}</p>
+                              )}
+                              {app.why_us && (
+                                <div className="mt-2">
+                                  <p className="text-sm font-medium">Why Us:</p>
+                                  <p className="text-sm text-muted-foreground">{app.why_us}</p>
+                                </div>
+                              )}
+                              {app.cv_url && (
+                                <a 
+                                  href={app.cv_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2"
+                                >
+                                  <FileText className="h-4 w-4" />
+                                  View CV
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Applied: {new Date(app.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                            {app.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  className="bg-success hover:bg-success/90"
+                                  onClick={async () => {
+                                    await supabase
+                                      .from('job_applications')
+                                      .update({ status: 'approved', reviewed_at: new Date().toISOString() })
+                                      .eq('id', app.id);
+                                    queryClient.invalidateQueries({ queryKey: ['job-applications'] });
+                                    toast.success('Application approved');
+                                  }}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={async () => {
+                                    await supabase
+                                      .from('job_applications')
+                                      .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
+                                      .eq('id', app.id);
+                                    queryClient.invalidateQueries({ queryKey: ['job-applications'] });
+                                    toast.success('Application rejected');
+                                  }}
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {isManagerOrAbove && (
           <TabsContent value="pending" className="space-y-4">

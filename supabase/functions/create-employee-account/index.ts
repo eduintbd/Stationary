@@ -25,6 +25,28 @@ serve(async (req) => {
 
     const { employeeData } = await req.json();
 
+    // Generate next serial employee code
+    const { data: existingCodes } = await supabaseClient
+      .from("employees")
+      .select("employee_code")
+      .like("employee_code", "EDU%");
+
+    let nextNumber = 15; // Start from 15 as requested
+    if (existingCodes && existingCodes.length > 0) {
+      const numbers = existingCodes
+        .map((e) => {
+          const match = e.employee_code.match(/^EDU(\d+)$/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter((n) => n > 0);
+      
+      if (numbers.length > 0) {
+        nextNumber = Math.max(...numbers) + 1;
+      }
+    }
+    
+    const employeeCode = `EDU${String(nextNumber).padStart(2, "0")}`;
+
     // Create auth user
     const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
       email: employeeData.email,
@@ -40,7 +62,7 @@ serve(async (req) => {
       .from("employees")
       .insert({
         user_id: authData.user.id,
-        employee_code: employeeData.employee_code,
+        employee_code: employeeCode,
         first_name: employeeData.first_name,
         last_name: employeeData.last_name,
         email: employeeData.email,

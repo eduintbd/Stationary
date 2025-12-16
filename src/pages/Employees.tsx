@@ -730,31 +730,58 @@ export default function Employees() {
                                   size="sm"
                                   className="bg-success hover:bg-success/90"
                                   onClick={async () => {
-                                    await supabase
-                                      .from('job_applications')
-                                      .update({ status: 'approved', reviewed_at: new Date().toISOString() })
-                                      .eq('id', app.id);
-                                    
-                                    // Send approval notification email
-                                    const nameParts = app.full_name.split(' ');
-                                    const firstName = nameParts[0] || app.full_name;
-                                    const lastName = nameParts.slice(1).join(' ') || '';
-                                    
-                                    await supabase.functions.invoke("send-approval-email", {
-                                      body: {
-                                        email: app.email,
-                                        firstName,
-                                        lastName,
-                                        status: "approved",
-                                        position: app.role_applied || "Campus Ambassador",
-                                        department: "Recruitment",
-                                        companyEmail: "",
-                                        joiningDate: new Date().toISOString(),
-                                      },
-                                    });
-                                    
-                                    queryClient.invalidateQueries({ queryKey: ['job-applications'] });
-                                    toast.success('Application approved and notification sent');
+                                    try {
+                                      // Update application status
+                                      await supabase
+                                        .from('job_applications')
+                                        .update({ status: 'approved', reviewed_at: new Date().toISOString() })
+                                        .eq('id', app.id);
+                                      
+                                      // Parse applicant name
+                                      const nameParts = app.full_name.trim().split(' ');
+                                      const firstName = nameParts[0] || app.full_name;
+                                      const lastName = nameParts.slice(1).join(' ') || '';
+                                      
+                                      // Create employee account (pending registration)
+                                      const { data: empData, error: empError } = await supabase.functions.invoke("create-employee-account", {
+                                        body: {
+                                          email: app.email,
+                                          first_name: firstName,
+                                          last_name: lastName,
+                                          phone: app.phone || '',
+                                          date_of_birth: app.date_of_birth,
+                                          cv_url: app.cv_url,
+                                          hire_date: new Date().toISOString().split('T')[0],
+                                        },
+                                      });
+                                      
+                                      if (empError) {
+                                        console.error("Failed to create employee account:", empError);
+                                        toast.error("Application approved but failed to create employee account: " + empError.message);
+                                      } else {
+                                        // Send approval notification email
+                                        await supabase.functions.invoke("send-approval-email", {
+                                          body: {
+                                            email: app.email,
+                                            firstName,
+                                            lastName,
+                                            status: "approved",
+                                            position: app.role_applied || "Campus Ambassador",
+                                            department: "Recruitment",
+                                            companyEmail: "",
+                                            joiningDate: new Date().toISOString(),
+                                          },
+                                        });
+                                        
+                                        toast.success('Application approved! Employee account created (pending registration).');
+                                      }
+                                      
+                                      queryClient.invalidateQueries({ queryKey: ['job-applications'] });
+                                      queryClient.invalidateQueries({ queryKey: ['pending-registrations'] });
+                                      queryClient.invalidateQueries({ queryKey: ['employees'] });
+                                    } catch (err: any) {
+                                      toast.error("Error approving application: " + err.message);
+                                    }
                                   }}
                                 >
                                   <CheckCircle className="h-4 w-4 mr-1" />

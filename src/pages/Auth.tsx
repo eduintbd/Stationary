@@ -123,11 +123,12 @@ const Auth = () => {
         "create-employee-account",
         {
           body: {
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            email: email.trim(),
-            phone: phone.trim(),
-            password,
+            employeeData: {
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
+              email: email.trim(),
+              phone: phone.trim(),
+            },
           },
         }
       );
@@ -145,6 +146,7 @@ const Auth = () => {
       setFirstName("");
       setLastName("");
       setPhone("");
+      setEmail("");
       setPassword("");
       setConfirmPassword("");
     } catch (error: any) {

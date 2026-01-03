@@ -571,7 +571,19 @@ export default function Employees() {
                   <Card key={employee.id} className="p-4">
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <p className="font-medium text-sm">{employee.first_name} {employee.last_name}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-sm">{employee.first_name} {employee.last_name}</p>
+                          {employee.roles?.includes('admin') && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">Admin</span>
+                          )}
+                          {employee.roles?.includes('manager') && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Manager</span>
+                          )}
+                          {(!employee.roles || employee.roles.length === 0 || 
+                            (employee.roles.length === 1 && employee.roles.includes('employee'))) && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">Employee</span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">{employee.employee_code}</p>
                       </div>
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -580,17 +592,9 @@ export default function Employees() {
                         {employee.status}
                       </span>
                     </div>
-                    <div className="text-xs text-muted-foreground mb-2">
+                    <div className="text-xs text-muted-foreground mb-3">
                       <p>{employee.position?.position_title || '-'}</p>
                       <p>{employee.department?.department_name || '-'}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {employee.roles?.includes('admin') && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-accent/20 text-accent-foreground">Admin</span>
-                      )}
-                      {employee.roles?.includes('manager') && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">Manager</span>
-                      )}
                     </div>
                     <Button
                       variant="outline"

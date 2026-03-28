@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+*.db
+*.sqlite
+.DS_Store
+.expo/
+android/
+ios/
+*.tsbuildinfo
+.claude/

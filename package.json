@@ -1,0 +1,20 @@
+{
+  "name": "bhai-bhai-store-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Grocery expense tracker for Bhai Bhai Store",
+  "workspaces": [
+    "shared",
+    "backend",
+    "web",
+    "mobile"
+  ],
+  "scripts": {
+    "start": "npx tsx backend/src/index.ts",
+    "build:web": "npx vite build --config web/vite.config.ts --root web",
+    "build": "npm run build:web",
+    "backend:dev": "npm run dev -w backend",
+    "web:dev": "npm run dev -w web",
+    "mobile:dev": "npm run start -w mobile"
+  }
+}
